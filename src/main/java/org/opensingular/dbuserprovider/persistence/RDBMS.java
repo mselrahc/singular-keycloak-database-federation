@@ -1,26 +1,27 @@
 package org.opensingular.dbuserprovider.persistence;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
+import org.hibernate.dialect.DB2Dialect;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.dialect.MySQLDialect;
 import org.hibernate.dialect.OracleDialect;
 import org.hibernate.dialect.PostgreSQLDialect;
 import org.hibernate.dialect.SQLServerDialect;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-
 public enum RDBMS {
 
     POSTGRESQL("PostgreSQL 12+", org.postgresql.Driver.class.getName(), "SELECT 1", new PostgreSQLDialect()),
     MYSQL("MySQL 8+", com.mysql.cj.jdbc.Driver.class.getName(), "SELECT 1", new MySQLDialect()),
     ORACLE("Oracle 19+", oracle.jdbc.OracleDriver.class.getName(), "SELECT 1 FROM DUAL", new OracleDialect()),
+    IBMDB2("IBM DB2", com.ibm.db2.jcc.DB2Driver.class.getName(), "select * from sysibm.sysdummy1", new DB2Dialect()),
     SQL_SERVER("MS SQL Server 2012+ (jtds)", net.sourceforge.jtds.jdbc.Driver.class.getName(), "SELECT 1", new SQLServerDialect());
 
-    private final String  desc;
-    private final String  driver;
-    private final String  testString;
+    private final String desc;
+    private final String driver;
+    private final String testString;
     private final Dialect dialect;
 
     RDBMS(String desc, String driver, String testString, Dialect dialect) {
@@ -58,6 +59,5 @@ public enum RDBMS {
     public String getTestString() {
         return testString;
     }
-
 
 }

@@ -1,12 +1,24 @@
 package org.opensingular.dbuserprovider;
 
-import lombok.extern.jbosslog.JBossLog;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Stream;
+
+import org.jboss.logging.Logger;
 import org.keycloak.component.ComponentModel;
 import org.keycloak.credential.CredentialInput;
 import org.keycloak.credential.CredentialInputUpdater;
 import org.keycloak.credential.CredentialInputValidator;
+import org.keycloak.models.GroupModel;
+import org.keycloak.models.KeycloakSession;
+import org.keycloak.models.RealmModel;
+import org.keycloak.models.RoleModel;
+import org.keycloak.models.UserCredentialModel;
+import org.keycloak.models.UserModel;
 import org.keycloak.models.cache.CachedUserModel;
-import org.keycloak.models.*;
 import org.keycloak.models.credential.PasswordCredentialModel;
 import org.keycloak.storage.StorageId;
 import org.keycloak.storage.UserStorageProvider;
@@ -19,15 +31,10 @@ import org.opensingular.dbuserprovider.persistence.DataSourceProvider;
 import org.opensingular.dbuserprovider.persistence.UserRepository;
 import org.opensingular.dbuserprovider.util.PagingUtil;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Stream;
-
-@JBossLog
 public class DBUserStorageProvider implements UserStorageProvider,
                                               UserLookupProvider, UserQueryProvider, CredentialInputUpdater, CredentialInputValidator, UserRegistrationProvider {
-    
+
+    private static final Logger log = Logger.getLogger(DBUserStorageProvider.class);
     private final KeycloakSession session;
     private final ComponentModel  model;
     private final UserRepository  repository;
@@ -176,22 +183,22 @@ public class DBUserStorageProvider implements UserStorageProvider,
     
     @Override
     public int getUsersCount(RealmModel realm, String search) {
-        return repository.getUsersCount(search);
+        return repository.getUsersCount(Collections.singletonMap(UserModel.SEARCH, search));
     }
     
     @Override
     public int getUsersCount(RealmModel realm, String search, Set<String> groupIds) {
-        return repository.getUsersCount(search);
+        return repository.getUsersCount(Collections.singletonMap(UserModel.SEARCH, search));
     }
     
     @Override
     public int getUsersCount(RealmModel realm, Map<String, String> params) {
-        return repository.getUsersCount(null);
+        return repository.getUsersCount(params);
     }
     
     @Override
     public int getUsersCount(RealmModel realm, Map<String, String> params, Set<String> groupIds) {
-        return repository.getUsersCount(null);
+        return repository.getUsersCount(params);
     }
     
     @Override
@@ -204,7 +211,7 @@ public class DBUserStorageProvider implements UserStorageProvider,
         Integer maxResults)
     {
         log.infov("list users: realm={0} firstResult={1} maxResults={2}", realm.getId(), firstResult, maxResults);
-        return internalSearchForUser(search, realm, new PagingUtil.Pageable(firstResult, maxResults));
+        return internalSearchForUser(Collections.singletonMap(UserModel.SEARCH, search), realm, new PagingUtil.Pageable(firstResult, maxResults));
     }
     
     @Override
@@ -212,14 +219,14 @@ public class DBUserStorageProvider implements UserStorageProvider,
         Integer maxResults)
     {
         log.infov("search for users with params: realm={0} params={1}", realm.getId(), params);
-        return internalSearchForUser(params.values().stream().findFirst().orElse(null), realm, null);
+        return internalSearchForUser(params, realm, new PagingUtil.Pageable(firstResult, maxResults));
     }
     
     @Override
     public Stream<UserModel> searchForUserByUserAttributeStream(RealmModel realm, String attrName, String attrValue)
     {
         log.infov("search for group members: realm={0} attrName={1} attrValue={2}", realm.getId(), attrName, attrValue);
-        return Stream.empty();
+        return internalSearchForUser(Collections.singletonMap(attrName, attrValue), realm, null);
     }
     
     @Override
@@ -230,7 +237,7 @@ public class DBUserStorageProvider implements UserStorageProvider,
         return Stream.empty();
     }
     
-    private Stream<UserModel> internalSearchForUser(String search, RealmModel realm, PagingUtil.Pageable pageable) {
+    private Stream<UserModel> internalSearchForUser(Map<String, String> search, RealmModel realm, PagingUtil.Pageable pageable) {
         return toUserModel(realm, repository.findUsers(search, pageable));
     }
     

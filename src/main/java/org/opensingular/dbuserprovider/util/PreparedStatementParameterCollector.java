@@ -26,7 +26,7 @@ import java.util.Map;
 
 public class PreparedStatementParameterCollector implements PreparedStatement {
 
-    private Map<Integer, Object> parameters = new HashMap<>();
+    private final Map<Integer, Object> parameters = new HashMap<>();
 
     Map<Integer, Object> getParameters() {
         return parameters;
