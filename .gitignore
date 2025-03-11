@@ -3,3 +3,5 @@ keycloak
 .DS_Store
 .idea
 .vscode/
+temp/
+.env
