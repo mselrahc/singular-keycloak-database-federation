@@ -9,10 +9,10 @@ import javax.crypto.spec.PBEKeySpec;
 
 public class PBKDF2SHA256HashingUtil {
 
-    private char[] password;
-    private byte[] salt;
-    private int iterations;
-    private static final int keyLength = 256;
+    private final char[] password;
+    private final byte[] salt;
+    private final int iterations;
+    private static final int KEY_LENGTH = 256;
     /**
      * @param password
      * @param salt
@@ -28,10 +28,11 @@ public class PBKDF2SHA256HashingUtil {
         return Objects.equals(passwordHash, hashPassword());
     }
 
+    @SuppressWarnings("UseSpecificCatch")
     private String hashPassword(){
         try {
             SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
-            PBEKeySpec spec = new PBEKeySpec(this.password, this.salt, this.iterations, keyLength);
+            PBEKeySpec spec = new PBEKeySpec(this.password, this.salt, this.iterations, KEY_LENGTH);
             SecretKey key = skf.generateSecret(spec);
             return Base64.getEncoder().encodeToString(key.getEncoded());
         } catch (Exception e) {

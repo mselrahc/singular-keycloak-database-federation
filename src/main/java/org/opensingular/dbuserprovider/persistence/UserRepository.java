@@ -23,23 +23,26 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.binary.StringUtils;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.NotImplementedException;
-import org.mindrot.jbcrypt.BCrypt;
+import org.jboss.logging.Logger;
 import org.opensingular.dbuserprovider.DBUserStorageException;
+import org.opensingular.dbuserprovider.DBUserStorageProvider;
 import org.opensingular.dbuserprovider.model.QueryConfigurations;
 import org.opensingular.dbuserprovider.util.PBKDF2SHA256HashingUtil;
 import org.opensingular.dbuserprovider.util.PagingUtil;
 import org.opensingular.dbuserprovider.util.PagingUtil.Pageable;
+import org.opensingular.dbuserprovider.util.SearchUtil;
+import org.opensingular.dbuserprovider.util.SearchUtil.SearchQuery;
 
 import com.google.common.collect.ImmutableMap;
 
+import at.favre.lib.crypto.bcrypt.BCrypt;
 import de.mkammerer.argon2.Argon2;
 import de.mkammerer.argon2.Argon2Factory;
 import de.mkammerer.argon2.Argon2Factory.Argon2Types;
-import lombok.extern.jbosslog.JBossLog;
 
 
-@JBossLog
 public class UserRepository {
+    private static final Logger log = Logger.getLogger(DBUserStorageProvider.class);
     private static final Map<String, Argon2Types> ARGON2TYPES = ImmutableMap.of(
         "Argon2d", Argon2Types.ARGON2d,
         "Argon2i", Argon2Types.ARGON2i,
@@ -51,8 +54,8 @@ public class UserRepository {
         Argon2Types.ARGON2id, Argon2Factory.create(Argon2Types.ARGON2id)
     );
     
-    private DataSourceProvider  dataSourceProvider;
-    private QueryConfigurations queryConfigurations;
+    private final DataSourceProvider  dataSourceProvider;
+    private final QueryConfigurations queryConfigurations;
     
     public UserRepository(DataSourceProvider dataSourceProvider, QueryConfigurations queryConfigurations) {
         this.dataSourceProvider  = dataSourceProvider;
@@ -87,6 +90,7 @@ public class UserRepository {
         return null;
     }
     
+    @SuppressWarnings("UseSpecificCatch")
     private List<Map<String, String>> readMap(ResultSet rs) {
         try {
             List<Map<String, String>> data         = new ArrayList<>();
@@ -102,6 +106,7 @@ public class UserRepository {
                 }
                 data.add(result);
             }
+            log.infov("Result count: {0}", data.size());
             return data;
         } catch (Exception e) {
             throw new DBUserStorageException(e.getMessage(), e);
@@ -109,6 +114,7 @@ public class UserRepository {
     }
     
     
+    @SuppressWarnings("UseSpecificCatch")
     private Integer readInt(ResultSet rs) {
         try {
             return rs.next() ? rs.getInt(1) : null;
@@ -117,6 +123,7 @@ public class UserRepository {
         }
     }
     
+    @SuppressWarnings({ "UseSpecificCatch", "unused" })
     private Boolean readBoolean(ResultSet rs) {
         try {
             return rs.next() ? rs.getBoolean(1) : null;
@@ -125,6 +132,7 @@ public class UserRepository {
         }
     }
     
+    @SuppressWarnings("UseSpecificCatch")
     private String readString(ResultSet rs) {
         try {
             return rs.next() ? rs.getString(1) : null;
@@ -134,24 +142,17 @@ public class UserRepository {
     }
     
     public List<Map<String, String>> getAllUsers() {
-        return doQuery(queryConfigurations.getListAll(), null, this::readMap);
+        return doQuery(queryConfigurations.getBaseQuery(), null, this::readMap);
     }
     
-    public int getUsersCount(String search) {
+    public int getUsersCount(Map<String, String> search) {
         if (search == null || search.isEmpty()) {
             return Optional.ofNullable(doQuery(queryConfigurations.getCount(), null, this::readInt)).orElse(0);
         } else {
-            String query = String.format("select count(*) from (%s) count", queryConfigurations.getFindBySearchTerm());
-            return Optional.ofNullable(doQuery(query, null, this::readInt, searchTermParams(search))).orElse(0);
+            SearchQuery searchQuery = SearchUtil.create(queryConfigurations.getBaseQuery(), queryConfigurations.getColumnsMapping(), search);
+            String query = String.format("select count(*) from (%s) count", searchQuery.getQuery());
+            return Optional.ofNullable(doQuery(query, null, this::readInt, searchQuery.getParams())).orElse(0);
         }
-    }
-    
-    private Object[] searchTermParams(String search) {
-        if (queryConfigurations.getFindBySearchTermParamsCount() == 1)
-            return new String[] {search};
-        String[] terms = new String[queryConfigurations.getFindBySearchTermParamsCount()];
-        Arrays.fill(terms, search);
-        return terms;
     }
     
     public Map<String, String> findUserById(String id) {
@@ -171,18 +172,19 @@ public class UserRepository {
             .orElse(Collections.emptyList())
             .stream().findFirst();
     }
-    
-    public List<Map<String, String>> findUsers(String search, PagingUtil.Pageable pageable) {
+
+    public List<Map<String, String>> findUsers(Map<String, String> search, PagingUtil.Pageable pageable) {
         if (search == null || search.isEmpty()) {
-            return doQuery(queryConfigurations.getListAll(), pageable, this::readMap);
+            return doQuery(queryConfigurations.getBaseQuery(), pageable, this::readMap);
         }
-        return doQuery(queryConfigurations.getFindBySearchTerm(), pageable, this::readMap, searchTermParams(search));
+        SearchQuery searchQuery = SearchUtil.create(queryConfigurations.getBaseQuery(), queryConfigurations.getColumnsMapping(), search);
+        return doQuery(searchQuery.getQuery(), pageable, this::readMap, searchQuery.getParams());
     }
     
     public boolean validateCredentials(String username, String password) {
         String hash = Optional.ofNullable(doQuery(queryConfigurations.getFindPasswordHash(), null, this::readString, username)).orElse("");
         if (queryConfigurations.isBlowfish()) {
-            return !hash.isEmpty() && BCrypt.checkpw(password, hash);
+            return !hash.isEmpty() && BCrypt.verifyer().verify(password.toCharArray(), hash).verified;
         } else if (queryConfigurations.isArgon2()) {
             return !hash.isEmpty() && ARGON2.get(ARGON2TYPES.get(queryConfigurations.getHashFunction())).verify(hash, password.toCharArray());
         } else {
@@ -190,7 +192,7 @@ public class UserRepository {
 
             if(hashFunction.equals("PBKDF2-SHA256")){
                 String[] components = hash.split("\\$");
-                return new PBKDF2SHA256HashingUtil(password, components[2], Integer.valueOf(components[1])).validatePassword(components[3]);
+                return new PBKDF2SHA256HashingUtil(password, components[2], Integer.parseInt(components[1])).validatePassword(components[3]);
             }
 
             MessageDigest digest   = DigestUtils.getDigest(hashFunction);
