@@ -198,7 +198,7 @@
                 <!-- https://repo1.maven.org/maven2/org/apache/maven/plugins/maven-jar-plugin/ -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.3.0</version>
+                <version>3.4.2</version>
                 <configuration>
                     <outputDirectory>${project.basedir}/dist</outputDirectory>
                 </configuration>
