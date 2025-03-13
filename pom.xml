@@ -223,7 +223,7 @@
         <jboss-logging.version>3.6.1.Final</jboss-logging.version>
         <keycloak.version>26.1.2</keycloak.version>
         <!-- https://repo1.maven.org/maven2/com/google/auto/service/auto-service/ -->
-        <auto-service.version>1.0-rc5</auto-service.version>
+        <auto-service.version>1.1.1</auto-service.version>
         <jboss.home>target/keycloak</jboss.home>
     </properties>
 
