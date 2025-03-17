@@ -174,7 +174,7 @@
                 <!-- https://repo1.maven.org/maven2/org/wildfly/plugins/wildfly-maven-plugin/ -->
                 <groupId>org.wildfly.plugins</groupId>
                 <artifactId>wildfly-maven-plugin</artifactId>
-                <version>4.2.0.Final</version>
+                <version>5.1.2.Final</version>
                 <configuration>
                     <skip>false</skip>
                 </configuration>
