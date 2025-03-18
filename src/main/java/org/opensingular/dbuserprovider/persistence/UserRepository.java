@@ -1,6 +1,5 @@
 package org.opensingular.dbuserprovider.persistence;
 
-import java.security.MessageDigest;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,47 +11,25 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
 import javax.sql.DataSource;
 
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.codec.binary.StringUtils;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang3.NotImplementedException;
 import org.jboss.logging.Logger;
 import org.opensingular.dbuserprovider.DBUserStorageException;
 import org.opensingular.dbuserprovider.DBUserStorageProvider;
 import org.opensingular.dbuserprovider.model.QueryConfigurations;
-import org.opensingular.dbuserprovider.util.PBKDF2SHA256HashingUtil;
+import org.opensingular.dbuserprovider.util.HashUtil;
 import org.opensingular.dbuserprovider.util.PagingUtil;
 import org.opensingular.dbuserprovider.util.PagingUtil.Pageable;
 import org.opensingular.dbuserprovider.util.SearchUtil;
 import org.opensingular.dbuserprovider.util.SearchUtil.SearchQuery;
 
-import com.google.common.collect.ImmutableMap;
-
-import at.favre.lib.crypto.bcrypt.BCrypt;
-import de.mkammerer.argon2.Argon2;
-import de.mkammerer.argon2.Argon2Factory;
-import de.mkammerer.argon2.Argon2Factory.Argon2Types;
-
 
 public class UserRepository {
     private static final Logger log = Logger.getLogger(DBUserStorageProvider.class);
-    private static final Map<String, Argon2Types> ARGON2TYPES = ImmutableMap.of(
-        "Argon2d", Argon2Types.ARGON2d,
-        "Argon2i", Argon2Types.ARGON2i,
-        "Argon2id", Argon2Types.ARGON2id
-    );
-    private static final Map<Argon2Types, Argon2> ARGON2 = ImmutableMap.of(
-        Argon2Types.ARGON2d, Argon2Factory.create(Argon2Types.ARGON2d),
-        Argon2Types.ARGON2i, Argon2Factory.create(Argon2Types.ARGON2i),
-        Argon2Types.ARGON2id, Argon2Factory.create(Argon2Types.ARGON2id)
-    );
     
     private final DataSourceProvider  dataSourceProvider;
     private final QueryConfigurations queryConfigurations;
@@ -183,26 +160,38 @@ public class UserRepository {
     
     public boolean validateCredentials(String username, String password) {
         String hash = Optional.ofNullable(doQuery(queryConfigurations.getFindPasswordHash(), null, this::readString, username)).orElse("");
-        if (queryConfigurations.isBlowfish()) {
-            return !hash.isEmpty() && BCrypt.verifyer().verify(password.toCharArray(), hash).verified;
-        } else if (queryConfigurations.isArgon2()) {
-            return !hash.isEmpty() && ARGON2.get(ARGON2TYPES.get(queryConfigurations.getHashFunction())).verify(hash, password.toCharArray());
-        } else {
-            String hashFunction = queryConfigurations.getHashFunction();
-
-            if(hashFunction.equals("PBKDF2-SHA256")){
-                String[] components = hash.split("\\$");
-                return new PBKDF2SHA256HashingUtil(password, components[2], Integer.parseInt(components[1])).validatePassword(components[3]);
-            }
-
-            MessageDigest digest   = DigestUtils.getDigest(hashFunction);
-            byte[]        pwdBytes = StringUtils.getBytesUtf8(password);
-            return Objects.equals(Hex.encodeHexString(digest.digest(pwdBytes)), hash);
-        }
+        return HashUtil.verify(hash, password, queryConfigurations.getHashFunction());
     }
     
     public boolean updateCredentials(String username, String password) {
-        throw new NotImplementedException("Password update not supported");
+        String query = queryConfigurations.getUpdatePassword();
+        if (query == null || query.isBlank()) {
+            throw new UnsupportedOperationException("Password update not supported");
+        }
+
+        Optional<DataSource> dataSourceOpt = dataSourceProvider.getDataSource();
+        if (!dataSourceOpt.isPresent()) {
+            throw new RuntimeException("Data source not found");
+        }
+
+        DataSource dataSource = dataSourceOpt.get();
+        try (Connection c = dataSource.getConnection()) {
+            log.infov("Query: {0}", query);
+            try (PreparedStatement statement = c.prepareStatement(query)) {
+                statement.setObject(1, HashUtil.hash(password, queryConfigurations.getHashFunction()));
+                statement.setObject(2, username);
+                boolean updated = statement.executeUpdate() > 0;
+                if (!updated) {
+                    throw new RuntimeException("Password update failed");
+                }
+                
+                return true;
+            }
+        } catch (SQLException e) {
+            log.error(e.getMessage(), e);
+        }
+        
+        return false;
     }
     
     public boolean removeUser() {

@@ -1,5 +1,7 @@
 package org.opensingular.dbuserprovider.util;
 
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 import java.util.Objects;
 
@@ -18,9 +20,9 @@ public class PBKDF2SHA256HashingUtil {
      * @param salt
      * @param iterations
      */
-    public PBKDF2SHA256HashingUtil(String password, String salt, int iterations){
+    public PBKDF2SHA256HashingUtil(String password, byte[] salt, int iterations){
         this.password = password.toCharArray();
-        this.salt = salt.getBytes();
+        this.salt = salt;
         this.iterations = iterations;
     }
 
@@ -28,15 +30,14 @@ public class PBKDF2SHA256HashingUtil {
         return Objects.equals(passwordHash, hashPassword());
     }
 
-    @SuppressWarnings("UseSpecificCatch")
-    private String hashPassword(){
+    public String hashPassword(){
         try {
             SecretKeyFactory skf = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
             PBEKeySpec spec = new PBEKeySpec(this.password, this.salt, this.iterations, KEY_LENGTH);
             SecretKey key = skf.generateSecret(spec);
             return Base64.getEncoder().encodeToString(key.getEncoded());
-        } catch (Exception e) {
-            return "";
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            throw new RuntimeException("Error hashing password", e);
         }
     }
 }

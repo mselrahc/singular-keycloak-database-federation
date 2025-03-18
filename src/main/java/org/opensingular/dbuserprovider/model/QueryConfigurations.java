@@ -18,6 +18,7 @@ public class QueryConfigurations {
     private final Map<String, String> columnsMapping;
     private final String findPasswordHash;
     private final String hashFunction;
+    private final String updatePassword;
     private final RDBMS RDBMS;
     private final boolean allowKeycloakDelete;
     private final boolean allowDatabaseToOverwriteKeycloak;
@@ -31,6 +32,7 @@ public class QueryConfigurations {
         List<String> columnsMapping,
         String findPasswordHash,
         String hashFunction,
+        String updatePassword,
         RDBMS RDBMS,
         boolean allowKeycloakDelete,
         boolean allowDatabaseToOverwriteKeycloak
@@ -46,6 +48,7 @@ public class QueryConfigurations {
             .collect(Collectors.toMap(arr -> arr[0].trim(), arr -> arr[1].trim()));
         this.findPasswordHash = findPasswordHash;
         this.hashFunction = hashFunction;
+        this.updatePassword = updatePassword;
         this.RDBMS = RDBMS;
         this.allowKeycloakDelete = allowKeycloakDelete;
         this.allowDatabaseToOverwriteKeycloak = allowDatabaseToOverwriteKeycloak;
@@ -117,13 +120,9 @@ public class QueryConfigurations {
     public String getHashFunction() {
         return hashFunction;
     }
-
-    public boolean isArgon2() {
-        return hashFunction.contains("Argon2");
-    }
-
-    public boolean isBlowfish() {
-        return hashFunction.toLowerCase().contains("blowfish");
+    
+    public String getUpdatePassword() {
+        return updatePassword;
     }
 
     public boolean getAllowKeycloakDelete() {
