@@ -59,6 +59,7 @@ public class DBUserStorageProviderFactory implements UserStorageProviderFactory<
             model.getConfig().get(StorageProviderConfig.COLUMNS_MAPPING.name()),
             model.get(StorageProviderConfig.FIND_PASSWORD_HASH.name()),
             model.get(StorageProviderConfig.HASH_FUNCTION.name()),
+            model.get(StorageProviderConfig.UPDATE_PASSWORD.name()),
             rdbms,
             model.get(StorageProviderConfig.ALLOW_KEYCLOAK_DELETE.name(), false),
             model.get(StorageProviderConfig.ALLOW_DATABASE_TO_OVERWRITE_KEYCLOAK.name(), false)
@@ -216,11 +217,20 @@ public class DBUserStorageProviderFactory implements UserStorageProviderFactory<
                                            .property()
                                            .name(StorageProviderConfig.HASH_FUNCTION.name())
                                            .label("Password hash function")
-                                           .helpText("Hash type used to match passwrod (md* e sha* uses hex hash digest)")
+                                           .helpText("Hash type used to match password (md* and sha* uses hex hash digest)")
                                            .type(ProviderConfigProperty.LIST_TYPE)
                                            .options("Blowfish (bcrypt)", "MD2", "MD5", "SHA-1", "SHA-256", "SHA3-224", "SHA3-256", "SHA3-384", "SHA3-512", "SHA-384", "SHA-512/224", "SHA-512/256", "SHA-512", "PBKDF2-SHA256", "Argon2d", "Argon2i", "Argon2id")
                                            .defaultValue("SHA-1")
                                            .add()
+
+                                           .property()
+                                           .name(StorageProviderConfig.UPDATE_PASSWORD.name())
+                                           .label("Update password SQL")
+                                           .helpText("Query to update password hash. This can be left empty to disable password update. Use ? as placeholders, placeholders will be substituted with the new password and username. The algorithm used to generate the password hash will be taken from the hash function setting.")
+                                           .type(ProviderConfigProperty.TEXT_TYPE)
+                                           .defaultValue("")
+                                           .add()
+
                                            .build();
     }
     

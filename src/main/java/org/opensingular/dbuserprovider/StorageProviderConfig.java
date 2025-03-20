@@ -14,5 +14,6 @@ public enum StorageProviderConfig {
     FIND_BY_EMAIL,
     COLUMNS_MAPPING,
     FIND_PASSWORD_HASH,
-    HASH_FUNCTION;
+    HASH_FUNCTION,
+    UPDATE_PASSWORD;
 }

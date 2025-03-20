@@ -27,6 +27,7 @@ Changes from the forked repo:
 - Change provider configuration
 - Add supports for attribute-based search
 - Fix user search in authorization evaluation test
+- Added support for password update
 
 
 ## Configuration
@@ -38,7 +39,7 @@ Keycloak User Federation Screenshot
 
 ## Limitations
 
-- Do not allow user information update, including password update
+- Do not allow user information update
 - Do not supports user roles or groups
 
 ## Custom attributes
