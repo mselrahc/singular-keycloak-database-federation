@@ -1,0 +1,47 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v3
+
+    - name: Set up Java
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Build with Maven
+      run: mvn clean package
+
+    - name: Get project version and artifactId from pom.xml
+      id: get-info
+      run: |
+        VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+        ARTIFACT_ID=$(mvn help:evaluate -Dexpression=project.artifactId -q -DforceStdout)
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "ARTIFACT_ID=$ARTIFACT_ID" >> $GITHUB_OUTPUT
+
+    - name: Prepare ZIP file
+      run: |
+        mkdir release
+        cp target/*.jar release/
+        cp target/deps/*.jar release/deps/
+        cd release
+        zip -r ../${{ steps.get-info.outputs.ARTIFACT_ID }}-${{ steps.get-info.outputs.VERSION }}.zip .
+        cd ..
+
+    - name: Upload ZIP to GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ${{ steps.get-info.outputs.ARTIFACT_ID }}-${{ steps.get-info.outputs.VERSION }}.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

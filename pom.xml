@@ -8,7 +8,7 @@
 
     <artifactId>singular-user-storage-provider</artifactId>
     <groupId>org.opensingular</groupId>
-    <version>2.4.6</version>
+    <version>26.1.1</version>
 
     <dependencies>
         <dependency>
@@ -168,7 +168,6 @@
 
 
     <build>
-        <finalName>singular-user-storage-provider</finalName>
         <plugins>
             <plugin>
                 <!-- https://repo1.maven.org/maven2/org/wildfly/plugins/wildfly-maven-plugin/ -->
@@ -189,7 +188,7 @@
                         </goals>
                         <configuration>
                             <excludeScope>provided</excludeScope>
-                            <outputDirectory>${project.basedir}/dist</outputDirectory>
+                            <outputDirectory>${project.basedir}/target/deps</outputDirectory>
                         </configuration>
                     </execution>
                 </executions>
@@ -199,9 +198,6 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.4.2</version>
-                <configuration>
-                    <outputDirectory>${project.basedir}/dist</outputDirectory>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

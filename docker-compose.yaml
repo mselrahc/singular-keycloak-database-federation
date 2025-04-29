@@ -2,6 +2,9 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.1.4
     environment:
+      - KC_PROXY_HEADERS=xforwarded
+      - KC_HOSTNAME_STRICT=false
+      - KC_HOSTNAME_DEBUG=true
       - KC_BOOTSTRAP_ADMIN_USERNAME=admin
       - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
       - KC_DB=${KC_DB}
@@ -9,8 +12,12 @@ services:
       - KC_DB_DRIVER=${KC_DB_DRIVER}
       - KC_DB_USERNAME=${KC_DB_USERNAME}
       - KC_DB_PASSWORD=${KC_DB_PASSWORD}
+      - KC_LOG_LEVEL: DEBUG
+      - DEBUG_PORT: '*:8787'
+      - DEBUG: 'true'
     ports:
       - "8080:8080"
+      - "8787:8787"
     command: ["--verbose", "start-dev"]
     volumes:
       - ./dist/:/opt/keycloak/providers/
