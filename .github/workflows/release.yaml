@@ -32,7 +32,7 @@ jobs:
 
     - name: Prepare ZIP file
       run: |
-        mkdir release
+        mkdir -p release/deps
         cp target/*.jar release/
         cp target/deps/*.jar release/deps/
         cd release
